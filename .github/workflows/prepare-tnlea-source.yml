@@ -1,5 +1,10 @@
 name: Prepare TNLEA Compass source
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/prepare-tnlea-source.yml"
+      - "TNLEA_Compass_Full_Version_Fixed.zip"
   workflow_dispatch:
 permissions:
   contents: write
@@ -24,6 +29,15 @@ jobs:
           test -f /tmp/tnlea-release/TNLEA_Compass_Full_Version/server.py
           cp -a /tmp/tnlea-release/TNLEA_Compass_Full_Version/. .
           rm -f ./*.zip
+      - name: Configure ephemeral seed database
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path("server.py")
+          s = p.read_text()
+          s = s.replace("str(ROOT/'tnlea.db')", "'/tmp/tnlea_compass.db'")
+          p.write_text(s)
+          PY
       - name: Validate backend
         run: |
           set -euo pipefail
@@ -36,5 +50,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
-          git commit -m 'Publish TNLEA Compass full-stack source' || echo 'No changes to commit'
+          git commit -m 'Publish validated TNLEA Compass source for Render' || echo 'No changes to commit'
           git push
