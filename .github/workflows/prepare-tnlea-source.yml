@@ -1,0 +1,40 @@
+name: Prepare TNLEA Compass source
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Extract release source
+        run: |
+          set -euo pipefail
+          archive="TNLEA_Compass_Full_Version_Fixed.zip"
+          test -f "$archive"
+          mkdir -p /tmp/tnlea-release
+          python - <<'PY'
+          import zipfile
+          with zipfile.ZipFile('TNLEA_Compass_Full_Version_Fixed.zip') as z:
+              z.extractall('/tmp/tnlea-release')
+          PY
+          test -f /tmp/tnlea-release/TNLEA_Compass_Full_Version/server.py
+          cp -a /tmp/tnlea-release/TNLEA_Compass_Full_Version/. .
+          rm -f ./*.zip
+      - name: Validate backend
+        run: |
+          set -euo pipefail
+          python -m pip install -r requirements.txt
+          python -m py_compile server.py
+          python -m unittest discover -s tests -v
+      - name: Commit extracted source
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Publish TNLEA Compass full-stack source' || echo 'No changes to commit'
+          git push
